@@ -1,9 +1,8 @@
 const express = require("express");
 const app = express();
 const cors = require("cors");
-const swaggerUi = require("swagger-ui-express");
-const swaggerDocument = require("./swagger.json");
 const bodyParser = require("body-parser");
+require("dotenv").config();
 const PORT = 3001;
 
 const authURL = process.env.AUTH_URL;
@@ -11,29 +10,55 @@ const studentURL = process.env.STUDENT_URL;
 
 // get token from auth service
 const axios = require("axios");
-app.get("/auth", async (req, res) => {
+app.use(express.json());
+
+app.post("/login", async (req, res) => {
+  console.log("Request body in gateway:", req.body); // Debugging
+
   try {
-    const response = await axios.post(authURL + "/auth", req.body);
-    res.status(200).send(response.data);
+    const config = {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+
+    const response = await axios.post(`${authURL}/auth/login`, req.body, config);
+
+    res.status(200).json(response.data);
   } catch (error) {
-    res.status(400).send(error);
+    console.error("Error in /login endpoint:", error); 
+    res.status(400).json({ message: error.message });
   }
 });
+//signup
+app.post("/signup", async (req, res) => {
+  console.log("Request body in gateway:", req.body); // Debugging
 
-// get all students from student service
-app.get("/students", async (req, res) => {
   try {
-    const response = await axios.get(studentURL + "/students");
-    res.status(200).send(response.data);
+    const config = {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+
+    const response = await axios.post(`${authURL}/auth/signup`, req.body, config);
+
+    res.status(200).json(response.data);
   } catch (error) {
-    res.status(400).send(error);
+    console.error("Error in /signup endpoint:", error); 
+    res.status(400).json({ message: error.message });
   }
+}
+);
+
+app.listen(4000, () => {
+  console.log("Gateway is running on port 4000");
 });
 
 // get student by id from student service
-app.get("/students/:id", async (req, res) => {
+app.get("/student/:id", async (req, res) => {
   try {
-    const response = await axios.get(studentURL + "/students/" + req.params.id);
+    const response = await axios.get(studentURL + "/student/" + req.params.id);
     res.status(200).send(response.data);
   } catch (error) {
     res.status(400).send(error);
@@ -43,7 +68,7 @@ app.get("/students/:id", async (req, res) => {
 // add addCourse to student service
 app.post("/addCourse", async (req, res) => {
   try {
-    const response = await axios.post(studentURL + "/students/addCourse", req.body);
+    const response = await axios.post(studentURL + "/student/addCourse", req.body);
     res.status(200).send(response.data);
   } catch (error) {
     res.status(400).send(error);
@@ -62,7 +87,7 @@ app.post("/addInstructors", async (req, res) => {
 
 
 // add course to student service
-app.post("/courses", async (req, res) => {
+app.get("/courses", async (req, res) => {
   try {
     const response = await axios.post(studentURL + "/courses", req.body);
     res.status(200).send(response.data);
@@ -108,16 +133,6 @@ app.use(cors());
 app.use(express.static("public"));
 app.use(bodyParser.json());
 app.use(express.json());
-app.use(dbConnectionMiddleware);
-app.use(
-  "/api-docs",
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerDocument, {
-    explorer: true,
-    customCssUrl: CSS_URL,
-  })
-);
-app.use("/auth", authenticationRouter);
 
 if (process.env.VERCEL == "1") {
 } else {
